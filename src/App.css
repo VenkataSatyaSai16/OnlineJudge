@@ -39,7 +39,7 @@ button {
 .logo,
 .navbar nav button {
   width: auto;
-  border: 0;
+  /* border: 0; */
   background: transparent;
   color: #222;
 }
@@ -48,6 +48,7 @@ button {
   padding: 0;
   font-weight: 700;
   font-size: 20px;
+  border:0;
 }
 
 .logo-mark,
@@ -228,4 +229,8 @@ button:disabled {
   .name-row {
     grid-template-columns: 1fr;
   }
+}
+
+button{
+  border: 1px solid black;
 }

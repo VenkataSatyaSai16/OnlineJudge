@@ -63,8 +63,6 @@ const register = async (req, res) => {
         res.status(201).json({ 
             success: true,
             message: "User registered successfully!",
-            user: userResponse,
-            token: token
         });
 
     } catch (error) {
