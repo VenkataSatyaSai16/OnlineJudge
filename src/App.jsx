@@ -64,7 +64,19 @@ function App() {
 
   const renderPage = () => {
     if (path === "/problems") {
-      return <ProblemsPage />;
+      return <ProblemsPage user={user} token={token} onNavigate={navigate} />;
+    }
+
+    if (path.startsWith("/problems/")) {
+      const questionId = decodeURIComponent(path.replace("/problems/", ""));
+      return (
+        <ProblemsPage
+          questionId={questionId}
+          user={user}
+          token={token}
+          onNavigate={navigate}
+        />
+      );
     }
 
     if (path === "/register") {

@@ -153,7 +153,8 @@ label {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #bbb;
@@ -169,7 +170,8 @@ textarea {
 
 form button,
 .auth-box > button,
-.profile button {
+.profile button,
+.admin-question-form button {
   width: 100%;
   padding: 11px 14px;
   border: 0;
@@ -233,4 +235,63 @@ button:disabled {
 
 button{
   border: 1px solid black;
+}
+
+
+#problems-table{
+  width: 60%;
+  border-collapse: collapse;
+  padding:10px;
+  border: 1px solid black;
+  margin: 1% ;
+}
+
+thead, tbody, tr , td ,th{
+  border: 1px solid black;
+  padding: 10px;
+}
+
+#problems-table-header{
+  background-color: rgb(248, 123, 21);
+}
+
+tbody, tr, td, th{
+  background-color: rgb(240, 75, 75);
+}
+
+a{
+  text-decoration: none;
+  color: black;
+}
+
+.problem-link {
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: black;
+  text-align: left;
+  text-decoration: underline;
+}
+
+pre {
+  max-width: 900px;
+  padding: 12px;
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.admin-question-form {
+  width: min(900px, calc(100% - 32px));
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-question-form h2 {
+  margin: 0;
 }

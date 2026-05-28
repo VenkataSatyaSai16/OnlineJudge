@@ -5,6 +5,8 @@ const cookieParser = require("cookie-parser");
 
 const DBConnection = require("./database/db");
 const authRoutes = require("./routes/authRoutes");
+const problemRoutes = require("./routes/problemPage");
+const submitRoutes = require("./routes/submit");
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +28,8 @@ DBConnection();
 
 // Routes
 app.use("/", authRoutes);
+app.use("/problems", problemRoutes);
+app.use("/problems", submitRoutes);
 
 // Start server
 app.listen(PORT, () => {

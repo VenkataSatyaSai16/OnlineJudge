@@ -23,6 +23,7 @@ function ProfilePage({ user, token, onLogout, onLogin }) {
           Name: <strong>{user.firstName} {user.lastName}</strong>
         </p>
         <p>Email: {user.email}</p>
+        <p>Role: {user.role || "user"}</p>
         <button type="button" onClick={onLogout}>
           Logout
         </button>
@@ -30,5 +31,7 @@ function ProfilePage({ user, token, onLogout, onLogin }) {
     </main>
   );
 }
+
+
 
 export default ProfilePage;
