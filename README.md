@@ -1,16 +1,39 @@
-# React + Vite
+# **Version 1**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Frontend
 
-Currently, two official plugins are available:
+- **Auth** : Register / Login
+- **Problems** : Set of Problems from different topics .
+- **Problem Page** : Question , Sample Input and output , code editor , run custom test cases , submit problem .
+- **Home Page** : Details of the website .
+- **Leaderboard** : Details of users .
+- **Solved** : Solved Questions details.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Tech Stack** : ReactJS + Redux 
 
-## React Compiler
+ # Backend 
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Auth** : JWT auth .
+- **Pages** : Dynamically fetch all problems from db.
+- **Problem Page** : Dynamically render the page using the database .
+- **online compiler(run)** : run programs for given inputs and give output .
+- **online judge(submit)** : fetch testcases from db and evaluate outputs and give a verdict .
+- **Submission** : store the result and problemId in db .
+- **Leaderboard** : Fetch from db . 
+- **Solved** : Dynamically fetch from db and sort based on the timestamp.
 
-## Expanding the ESLint configuration
+- **Tech Stack** : Express , Node.JS 
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# DB
+
+- **Users** : Username , Email , Password , FirstName , LastName 
+- **Problems** : ProblemId , ProblemName , ProblemStatement , Sample Input , Sample Output , TestCaseId 
+- **Test Cases** : ProblemId , T1 , OP1 
+- **Submission** : UserID , ProblemId , Code , Verdict , TimeStamp
+- **LeaderBoard** : UserId , questionsSolved
+
+- **Tech Stack** : MongoDB Atlas .
+
+
+# Progress
+
