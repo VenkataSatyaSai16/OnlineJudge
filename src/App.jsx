@@ -32,7 +32,6 @@ function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [user, setUser] = useState(savedAuth.user);
   const [token, setToken] = useState(savedAuth.token);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const updatePath = () => setPath(window.location.pathname);
@@ -50,7 +49,6 @@ function App() {
     setToken(nextToken);
     localStorage.setItem("authUser", JSON.stringify(nextUser));
     localStorage.setItem("authToken", nextToken);
-    setMessage("Success");
   };
 
   const logout = () => {
@@ -58,13 +56,36 @@ function App() {
     setToken("");
     localStorage.removeItem("authUser");
     localStorage.removeItem("authToken");
-    setMessage("Logged out");
     navigate("/");
   };
 
   const renderPage = () => {
     if (path === "/problems") {
       return <ProblemsPage user={user} token={token} onNavigate={navigate} />;
+    }
+
+    if (path === "/problems/add") {
+      return (
+        <ProblemsPage
+          isAddPage
+          user={user}
+          token={token}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (path.startsWith("/problems/edit/")) {
+      const questionId = decodeURIComponent(path.replace("/problems/edit/", ""));
+      return (
+        <ProblemsPage
+          questionId={questionId}
+          isEditPage
+          user={user}
+          token={token}
+          onNavigate={navigate}
+        />
+      );
     }
 
     if (path.startsWith("/problems/")) {
@@ -80,11 +101,11 @@ function App() {
     }
 
     if (path === "/register") {
-      return <AuthPage mode="register" onAuth={saveAuth} message={message} />;
+      return <AuthPage mode="register" onAuth={saveAuth} />;
     }
 
     if (path === "/login") {
-      return <AuthPage mode="login" onAuth={saveAuth} message={message} />;
+      return <AuthPage mode="login" onAuth={saveAuth} />;
     }
 
     if (path === "/profile") {
@@ -99,7 +120,12 @@ function App() {
     }
 
     if(path === "/googleLogin"){
-      return <GoogleLoginPage />;
+      return (
+        <GoogleLoginPage
+          onAuth={saveAuth}
+          onDone={() => navigate("/profile")}
+        />
+      );
     }
 
     return <HomePage />;
@@ -108,7 +134,6 @@ function App() {
   return (
     <>
       <Navbar user={user} onNavigate={navigate} />
-      {message && <p className="top-message">{message}</p>}
       {renderPage()}
     </>
   );

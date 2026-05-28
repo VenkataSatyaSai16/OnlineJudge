@@ -2,7 +2,7 @@ import {useState} from "react";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 
-function AuthPage({ mode, onAuth, message }) {
+function AuthPage({ mode, onAuth }) {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -120,7 +120,6 @@ function AuthPage({ mode, onAuth, message }) {
           </button>
         </form>
 
-        {message === "Success" && <p className="message success">Success</p>}
         {error && <p className="message error">{error}</p>}
       </section>
     </main>

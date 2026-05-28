@@ -60,6 +60,79 @@ const createQuestion = async (req, res) => {
     }
 };
 
+const updateQuestion = async (req, res) => {
+    const { questionId } = req.params;
+
+    try {
+        const {
+            questionId: nextQuestionId,
+            question,
+            difficultyLevel,
+            questionDesc,
+            sampleInput,
+            sampleOutput,
+            topics
+        } = req.body;
+
+        const topicList = Array.isArray(topics)
+            ? topics
+            : String(topics || "")
+                .split(",")
+                .map((topic) => topic.trim())
+                .filter(Boolean);
+
+        const updatedQuestion = await Questions.findOneAndUpdate(
+            { questionId },
+            {
+                questionId: nextQuestionId,
+                question,
+                difficultyLevel,
+                questionDesc,
+                sampleInput,
+                sampleOutput,
+                topics: topicList
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedQuestion) {
+            return res.status(404).json({
+                success: false,
+                message: "Question not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Question updated successfully",
+            data: updatedQuestion
+        });
+    } catch (error) {
+        console.error("Error updating question:", error);
+
+        if (error.name === "ValidationError") {
+            const validationErrors = Object.values(error.errors).map((err) => err.message);
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: validationErrors
+            });
+        }
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Question ID already exists"
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "Internal server error while updating question"
+        });
+    }
+};
+
 const listQuestions = async (req, res) => {
     try {
         const questions = await Questions.find({})
@@ -105,6 +178,7 @@ const loadQuestion = async (req, res) => {
 
 module.exports = {
     createQuestion,
+    updateQuestion,
     listQuestions,
     loadQuestion
 };

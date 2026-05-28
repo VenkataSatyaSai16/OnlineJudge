@@ -18,12 +18,14 @@ function ProfilePage({ user, token, onLogout, onLogin }) {
   return (
     <main className="page auth-page">
       <section className="auth-box profile">
+        {user.profileImage && (
+          <img className="profile-photo" src={user.profileImage} alt="Profile" />
+        )}
         <h1>Profile</h1>
         <p>
           Name: <strong>{user.firstName} {user.lastName}</strong>
         </p>
         <p>Email: {user.email}</p>
-        <p>Role: {user.role || "user"}</p>
         <button type="button" onClick={onLogout}>
           Logout
         </button>

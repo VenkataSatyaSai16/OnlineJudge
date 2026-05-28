@@ -40,7 +40,9 @@ const authUserSchema = new mongoose.Schema({
     // User's hashed password
     password: {
         type: String,
-        required: [true, "Password is required"],
+        required: function() {
+            return this.authProvider === "local";
+        },
         minlength: [6, "Password must be at least 6 characters long"]
     },
 
@@ -48,6 +50,22 @@ const authUserSchema = new mongoose.Schema({
         type: String,
         enum: ["user", "admin"],
         default: "user"
+    },
+
+    authProvider: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    },
+
+    googleId: {
+        type: String,
+        trim: true
+    },
+
+    profileImage: {
+        type: String,
+        trim: true
     },
 }, {
     timestamps: true // Automatically adds createdAt and updatedAt fields

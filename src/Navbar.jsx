@@ -21,7 +21,16 @@ function Navbar({ user, onNavigate }) {
             onClick={() => onNavigate("/profile")}
             title="Profile"
           >
-            {user.firstName?.charAt(0) || "P"}
+            {user.profileImage ? (
+              <img src={user.profileImage} alt="Profile" />
+            ) : (
+              <span aria-hidden="true" className="profile-symbol">
+                <svg viewBox="0 0 24 24" role="img">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c1.6-4.3 4.2-6.5 8-6.5s6.4 2.2 8 6.5" />
+                </svg>
+              </span>
+            )}
           </button>
         ) : (
           <>

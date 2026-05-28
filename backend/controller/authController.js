@@ -2,6 +2,29 @@ const AuthUser = require("../model/authUser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const createToken = (user) => jwt.sign(
+    {
+        id: user._id,
+        email: user.email,
+        role: user.role
+    },
+    process.env.JWT_SECRET,
+    {
+        expiresIn: "24h",
+    }
+);
+
+const toUserResponse = (user) => ({
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    authProvider: user.authProvider,
+    profileImage: user.profileImage,
+    createdAt: user.createdAt
+});
+
 /**
  * Register a new user
  * @route POST /register
@@ -40,27 +63,10 @@ const register = async (req, res) => {
         });
 
         // Generate JWT token
-        const token = jwt.sign(
-            { 
-                id: user._id, 
-                email: user.email,
-                role: user.role
-            }, 
-            process.env.JWT_SECRET, 
-            {
-                expiresIn: "24h",
-            }
-        );
+        const token = createToken(user);
 
         // Prepare user response (exclude password)
-        const userResponse = {
-            _id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role,
-            createdAt: user.createdAt
-        };
+        const userResponse = toUserResponse(user);
 
         res.status(201).json({ 
             success: true,
@@ -132,17 +138,7 @@ const login = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign(
-            { 
-                id: user._id,
-                email: user.email,
-                role: user.role
-            }, 
-            process.env.JWT_SECRET, 
-            {
-                expiresIn: "24h",
-            }
-        );
+        const token = createToken(user);
 
         // Set cookie options
         const cookieOptions = {
@@ -153,13 +149,7 @@ const login = async (req, res) => {
         };
 
         // Prepare user response (exclude password)
-        const userResponse = {
-            _id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role
-        };
+        const userResponse = toUserResponse(user);
 
         res.status(200)
            .cookie("token", token, cookieOptions)
@@ -179,4 +169,57 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+const googleLogin = async (req, res) => {
+    try {
+        const { googleId, email, firstName, lastName, fullName, profileImage } = req.body;
+
+        if (!(googleId && email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Google ID and email are required"
+            });
+        }
+
+        const safeEmail = email.toLowerCase().trim();
+        const nameParts = String(fullName || "").trim().split(" ").filter(Boolean);
+        const nextFirstName = firstName || nameParts[0] || "Google";
+        const nextLastName = lastName || nameParts.slice(1).join(" ") || "User";
+
+        let user = await AuthUser.findOne({ email: safeEmail });
+
+        if (user) {
+            user.googleId = user.googleId || googleId;
+            user.authProvider = user.authProvider || "google";
+            user.profileImage = profileImage || user.profileImage;
+            user.firstName = user.firstName || nextFirstName;
+            user.lastName = user.lastName || nextLastName;
+            await user.save();
+        } else {
+            user = await AuthUser.create({
+                firstName: nextFirstName,
+                lastName: nextLastName,
+                email: safeEmail,
+                authProvider: "google",
+                googleId,
+                profileImage,
+            });
+        }
+
+        const token = createToken(user);
+
+        res.status(200).json({
+            success: true,
+            message: "Google login successful!",
+            user: toUserResponse(user),
+            token
+        });
+    } catch (error) {
+        console.error("Google login error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error during Google login"
+        });
+    }
+};
+
+module.exports = { register, login, googleLogin };

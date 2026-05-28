@@ -1,5 +1,5 @@
 const express = require('express');
-const { createQuestion, listQuestions, loadQuestion } = require("../controller/problemPageController");
+const { createQuestion, updateQuestion, listQuestions, loadQuestion } = require("../controller/problemPageController");
 const { requireAuth, requireAdmin } = require("../middleware/authMiddleware");
 const Questions = require("../model/questionsDB");
 
@@ -19,6 +19,7 @@ router.get('/questionIds', async (req, res) => {
 });
 
 router.get('/:questionId', loadQuestion);
+router.put('/:questionId', requireAuth, requireAdmin, updateQuestion);
 
 
 module.exports = router;
