@@ -7,6 +7,7 @@ import AuthPage from "./AuthPage";
 import ProfilePage from "./ProfilePage";
 import "./App.css";
 import GoogleLoginPage from "./GoogleLogin";
+import Leaderboard from "./Leaderboard";
 
 // const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -125,6 +126,12 @@ function App() {
           onAuth={saveAuth}
           onDone={() => navigate("/profile")}
         />
+      );
+    }
+
+    if(path === "/leaderboard"){
+      return (
+        <Leaderboard />
       );
     }
 

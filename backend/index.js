@@ -8,6 +8,9 @@ const authRoutes = require("./routes/authRoutes");
 const problemRoutes = require("./routes/problemPage");
 const submitRoutes = require("./routes/submit");
 
+const leaderboardRoutes = require("./routes/leaderboard");
+
+
 // Load environment variables
 dotenv.config();
 
@@ -30,6 +33,8 @@ DBConnection();
 app.use("/", authRoutes);
 app.use("/problems", problemRoutes);
 app.use("/problems", submitRoutes);
+
+app.use("/leaderboard", leaderboardRoutes);
 
 // Start server
 app.listen(PORT, () => {

@@ -10,6 +10,10 @@ function Navbar({ user, onNavigate }) {
       </button>
 
       <nav>
+        <button type="button" onClick={() => onNavigate("/leaderboard")}>
+          Leaderboard
+        </button>
+
         <button type="button" onClick={() => onNavigate("/problems")}>
           Problems
         </button>

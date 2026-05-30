@@ -1,6 +1,7 @@
 const AuthUser = require("../model/authUser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { addUserToLeaderboard } = require("../middleware/leaderboardMiddleware");
 
 const createToken = (user) => jwt.sign(
     {
@@ -61,6 +62,8 @@ const register = async (req, res) => {
             email: email.toLowerCase().trim(),
             password: hashedPassword,
         });
+
+        await addUserToLeaderboard(user);
 
         // Generate JWT token
         const token = createToken(user);
@@ -204,6 +207,8 @@ const googleLogin = async (req, res) => {
                 profileImage,
             });
         }
+
+        await addUserToLeaderboard(user);
 
         const token = createToken(user);
 

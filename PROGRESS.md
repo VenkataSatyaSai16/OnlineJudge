@@ -6,16 +6,14 @@
 -  Authentication using Google OAuth via Supabase.
 -  Admin and user seperation for adding problems.
 -  Problems Page and Dynamically fetching from DB.
+-  Code Editor for writing codes (e.g. Monaco Editor).
 
 # IN-Progress
 
-- UI
-- Profile Page
+-  DB to store testcases.
 
 
 # Planning
-
-- Code Editor for writing codes (e.g. Monaco Editor).
 - Run and Submit Option.
 - Docker Integration for dynamically using the packages .
 - AWS Deployment.
