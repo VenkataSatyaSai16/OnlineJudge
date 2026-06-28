@@ -9,6 +9,14 @@ import EditProblemPage from "../pages/EditProblemPage";
 import ProfilePage from "../pages/ProfilePage";
 import LeaderboardPage from "../pages/LeaderboardPage";
 import AuthCallbackPage from "../pages/AuthCallbackPage";
+import VerifyEmailPage from "../pages/VerifyEmailPage";
+import DiscussionsPage from "../pages/DiscussionsPage";
+import DiscussionDetailsPage from "../pages/DiscussionDetailsPage";
+import StudyPlannerPage from "../pages/StudyPlannerPage";
+import MockOAGeneratorPage from "../pages/MockOAGeneratorPage";
+import MockOADetailsPage from "../pages/MockOADetailsPage";
+import MockOAAttemptPage from "../pages/MockOAAttemptPage";
+import MockOAResultPage from "../pages/MockOAResultPage";
 
 function AppRoutes() {
   return (
@@ -23,6 +31,14 @@ function AppRoutes() {
       <Route path="/profile" element={<ProfilePage/>} />
       <Route path="/leaderboard" element={ <LeaderboardPage/>} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/discussions" element={<DiscussionsPage />} />
+      <Route path="/discussions/:id" element={<DiscussionDetailsPage />} />
+      <Route path="/study-planner" element={<StudyPlannerPage />} />
+      <Route path="/mock-oa" element={<MockOAGeneratorPage />} />
+      <Route path="/mock-oa/:oaId" element={<MockOADetailsPage />} />
+      <Route path="/mock-oa/:oaId/attempt" element={<MockOAAttemptPage />} />
+      <Route path="/mock-oa/:oaId/result" element={<MockOAResultPage />} />
     </Routes>
   );
 }

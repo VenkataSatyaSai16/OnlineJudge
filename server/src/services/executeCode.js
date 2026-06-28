@@ -1,73 +1,90 @@
+import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 
-const execPromise =
-    promisify(exec);
+const execPromise = promisify(exec);
 
-const executeCode = async (
-    language,
-    filePath,
-    inputFilePath,
-    jobId
-) => {
+const executeCode = async (language, filePath, inputFilePath, jobId, timeLimit = 3000) => {
+  let command;
+  let executablePath = null;
 
-    let command;
+  const sandboxDir = path.join(process.cwd(), "sandbox", jobId);
 
-    const codesDir = path.join(
-        process.cwd(),
-        "codes"
-    );
+  switch (language) {
+    case "cpp":
+      executablePath = path.join(sandboxDir, "Main");
 
-    switch (language) {
+      command = `g++ "${filePath}" -o "${executablePath}" && "${executablePath}" < "${inputFilePath}"`;
 
-        case "cpp":
+      break;
 
-            command =
-                `g++ "${filePath}" -o "${codesDir}\\${jobId}.exe" && "${codesDir}\\${jobId}.exe" < "${inputFilePath}"`;
+    case "c":
+      executablePath = path.join(sandboxDir, "Main");
 
-            break;
+      command = `gcc "${filePath}" -o "${executablePath}" && "${executablePath}" < "${inputFilePath}"`;
 
-        case "c":
+      break;
 
-            command =
-                `gcc "${filePath}" -o "${codesDir}\\${jobId}.exe" && "${codesDir}\\${jobId}.exe" < "${inputFilePath}"`;
+    case "python":
+      command = `python3 "${filePath}" < "${inputFilePath}"`;
 
-            break;
+      break;
 
-        case "python":
+    case "javascript":
+      command = `node "${filePath}" < "${inputFilePath}"`;
 
-            command =
-                `python "${filePath}" < "${inputFilePath}"`;
+      break;
 
-            break;
+    case "java":
+      command = `javac "${filePath}" && java -cp "${sandboxDir}" ${jobId} < "${inputFilePath}"`;
 
-        case "javascript":
+      break;
 
-            command =
-                `node "${filePath}" < "${inputFilePath}"`;
+    default:
+      throw new Error("Unsupported language");
+  }
 
-            break;
+  try {
+    const { stdout } = await execPromise(command, {
+      timeout: timeLimit,
+      cwd: sandboxDir,
+    });
 
-        default:
-
-            throw new Error(
-                "Unsupported language"
-            );
+    return {
+      verdict: "Success",
+      output: stdout,
+    };
+  } catch (error) {
+    if (error.killed) {
+      return {
+        verdict: "Time Limit Exceeded",
+        output: null,
+      };
     }
 
-    const {
-        stdout,
-        stderr
-    } = await execPromise(
-        command
-    );
+    const errorText = error.stderr || error.message;
 
-    if (stderr) {
-        throw new Error(stderr);
+    if (errorText.includes("error:")) {
+      return {
+        verdict: "Compilation Error",
+        output: null,
+      };
     }
 
-    return stdout;
+    return {
+      verdict: "Runtime Error",
+      output: null,
+    };
+  } finally {
+    try {
+      if (sandboxDir && fs.existsSync(sandboxDir)) {
+        fs.rmSync(sandboxDir, { recursive: true, force: true });
+      }
+    } catch (error) {
+      console.error("Cleanup Error:", error.message);
+    }
+  }
 };
 
 export default executeCode;

@@ -1,0 +1,81 @@
+# =========================
+# Dependencies
+# =========================
+client/node_modules/
+server/node_modules/
+
+# =========================
+# Environment Variables
+# =========================
+client/.env
+client/.env.local
+
+server/.env
+server/.env.local
+
+# =========================
+# Build folders
+# =========================
+client/dist/
+client/build/
+
+server/dist/
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Judge Temporary Files
+# =========================
+server/codes/
+server/inputs/
+server/outputs/
+server/temp/
+server/uploads/
+
+# =========================
+# Generated Files
+# =========================
+*.out
+*.exe
+*.class
+*.o
+*.obj
+*.pyc
+
+# =========================
+# Coverage
+# =========================
+coverage/
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Keys / Secrets
+# =========================
+keys/
+*.pem
+*.key
+*.crt
+*.p12
+
+# =========================
+# Misc
+# =========================
+.cache/

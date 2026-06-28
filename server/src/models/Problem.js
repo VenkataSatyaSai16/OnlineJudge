@@ -77,6 +77,89 @@ const ProblemSchema = new mongoose.Schema(
         }
     ],
 
+    sampleTestCases:[
+        {
+            input:{
+                type:String,
+                required:true
+            },
+
+            output:{
+                type:String,
+                required:true
+            },
+
+            explanation:{
+                type:String,
+                default:""
+            }
+        }
+    ],
+
+    hiddenTestCases:[
+        {
+            input:{
+                type:String,
+                required:true
+            },
+
+            output:{
+                type:String,
+                required:true
+            }
+        }
+    ],
+
+    timeLimit:{
+        type:Number,
+        default:2
+    },
+
+    memoryLimit:{
+        type:Number,
+        default:256
+    },
+
+    functionSignature:{
+        type:String,
+        default:""
+    },
+
+    source:{
+        type:String,
+        enum:{
+            values:["manual","mockoa"],
+            message:"Source must be manual or mockoa"
+        },
+        default:"manual"
+    },
+
+    visibility:{
+        type:String,
+        enum:{
+            values:["public","private"],
+            message:"Visibility must be public or private"
+        },
+        default:"public"
+    },
+
+    owner:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        default:null
+    },
+
+    oaId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"MockOA",
+        default:null
+    },
+
+    expectedFunctionSignature:{
+        type:String,
+        default:""
+    },
+
     createdBy:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
@@ -87,6 +170,10 @@ const ProblemSchema = new mongoose.Schema(
     timestamps:true
 }
 );
+
+ProblemSchema.index({ visibility:1, createdAt:-1 });
+ProblemSchema.index({ owner:1, oaId:1, source:1 });
+ProblemSchema.index({ difficulty:1, tags:1 });
 
 const Problem = mongoose.model("Problem", ProblemSchema);
 

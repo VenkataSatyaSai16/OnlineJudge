@@ -2,58 +2,60 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-const createCodeFile = async (
-    language,
-    code
-) => {
+const createCodeFile = async (language, code) => {
+  if (!code) {
+    throw new Error("Code is required");
+  }
 
-    if (!code) {
-        throw new Error("Code is required");
-    }
+  const languageExtension = {
+    cpp: "cpp",
+    c: "c",
+    python: "py",
+    javascript: "js",
+    java: "java",
+  };
 
-    const codesDir = path.join(
-        process.cwd(),
-        "codes"
+  const extension = languageExtension[language];
+
+  if (!extension) {
+    throw new Error("Unsupported language");
+  }
+
+  const uuid = uuidv4();
+
+  let jobId = uuid;
+  let fileName = `${uuid}.${extension}`;
+  let finalCode = code;
+
+  if (language === "java") {
+    // Java-safe class name
+    const javaClassName = `Main_${uuid.replace(/-/g, "_")}`;
+
+    finalCode = code.replace(
+      /public\s+class\s+\w+/,
+      `public class ${javaClassName}`
     );
 
-    if (!fs.existsSync(codesDir)) {
-        fs.mkdirSync(codesDir, {
-            recursive: true
-        });
-    }
+    jobId = javaClassName;
+    fileName = `${javaClassName}.java`;
+  }
 
-    const extensions = {
-        cpp: "cpp",
-        c: "c",
-        python: "py",
-        javascript: "js"
-    };
+  const sandboxDir = path.join(process.cwd(), "sandbox", jobId);
 
-    const extension =
-        extensions[language];
+  if (!fs.existsSync(sandboxDir)) {
+    fs.mkdirSync(sandboxDir, {
+      recursive: true,
+    });
+  }
 
-    if (!extension) {
-        throw new Error(
-            "Unsupported language"
-        );
-    }
+  const filePath = path.join(sandboxDir, fileName);
 
-    const jobId = uuidv4();
+  fs.writeFileSync(filePath, finalCode);
 
-    const filePath = path.join(
-        codesDir,
-        `${jobId}.${extension}`
-    );
-
-    fs.writeFileSync(
-        filePath,
-        code
-    );
-
-    return {
-        jobId,
-        filePath
-    };
+  return {
+    jobId,
+    filePath,
+  };
 };
 
 export default createCodeFile;

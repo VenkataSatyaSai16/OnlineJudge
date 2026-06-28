@@ -1,6 +1,16 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
+import {
+  generateOtp,
+  getOtpCooldownRemaining,
+  getOtpExpiry,
+  hashOtp,
+  isOtpExpired,
+  verifyOtpHash,
+} from "../services/otpService.js";
+import { sendVerificationEmail } from "../services/emailService.js";
+import { deleteCache, getCache, setCache } from "../services/cacheService.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -27,7 +37,13 @@ export const registerUser = async (req, res) => {
       username,
       email,
       password: hashedPassword,
+      emailVerified: false,
     });
+
+    await deleteCache(
+      `username:${username.toLowerCase()}`,
+      `email:${email.toLowerCase()}`,
+    );
 
     //JWT
     const token = generateToken(user._id, user.role);
@@ -35,7 +51,7 @@ export const registerUser = async (req, res) => {
     //Cookie
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
@@ -46,10 +62,15 @@ export const registerUser = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
+        provider: user.provider,
+        emailVerified: user.emailVerified,
       },
     });
   } catch (error) {
     console.error(error.message);
+    console.log("Status:", error.response?.status);
+    console.log("Response:", error.response?.data);
     return res.status(500).json({
       message: "Internal Server Error",
     });
@@ -101,7 +122,15 @@ export const loginUser = async (req, res) => {
 
     return res.status(200).json({
       message: "Login Successful",
-      user,
+      user: {
+        id: user._id,
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        provider: user.provider,
+        emailVerified: user.emailVerified,
+      },
     });
   } catch (error) {
     console.log(error.message);
@@ -133,12 +162,16 @@ export const googleLogin = async (req, res) => {
         username,
         email,
         provider: "google",
-        role,
+        role: "user",
+        emailVerified: true,
         password: hashedPassword,
       });
+    } else if (!user.emailVerified) {
+      user.emailVerified = true;
+      await user.save();
     }
 
-    const token = generateToken(user._id,user.role);
+    const token = generateToken(user._id, user.role);
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -154,6 +187,7 @@ export const googleLogin = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        emailVerified: user.emailVerified,
       },
     });
   } catch (error) {
@@ -175,13 +209,23 @@ export const checkUsername = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({
-      username,
-    });
+    const key = `username:${username.toLowerCase()}`;
+    const cached = await getCache(key);
 
-    return res.status(200).json({
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const existingUser = await User.findOne({ username });
+
+    const result = {
       available: !existingUser,
-    });
+      message: existingUser ? "Already Registered" : "Available",
+    };
+
+    await setCache(key, result, 600);
+
+    return res.status(200).json(result);
   } catch (error) {
     console.error(error);
 
@@ -201,4 +245,152 @@ export const logout = (req, res) => {
   return res.status(200).json({
     message: "Logged out successfully",
   });
+};
+
+export const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({
+        available: false,
+        message: "Invalid email",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const key = `email:${normalizedEmail}`;
+    const cached = await getCache(key);
+
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    const result = {
+      available: !existingUser,
+      message: existingUser ? "Already Registered" : "Available",
+    };
+
+    await setCache(key, result, 600);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const sendVerificationOtp = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    if (user.emailVerified || user.provider === "google") {
+      return res.status(200).json({
+        message: "Email already verified",
+        emailVerified: true,
+      });
+    }
+
+    const cooldownRemaining = getOtpCooldownRemaining(
+      user.emailVerificationLastSentAt,
+    );
+
+    if (cooldownRemaining > 0) {
+      return res.status(429).json({
+        message: "Please wait before requesting another OTP",
+        retryAfterSeconds: Math.ceil(cooldownRemaining / 1000),
+      });
+    }
+
+    const otp = generateOtp();
+    user.emailVerificationOtpHash = await hashOtp(otp);
+    user.emailVerificationOtpExpiresAt = getOtpExpiry();
+    user.emailVerificationLastSentAt = new Date();
+    await user.save();
+    console.log(user);
+
+    const emailResult = await sendVerificationEmail(user.email, otp);
+
+    return res.status(200).json({
+      message: emailResult.sent
+        ? "Verification OTP sent"
+        : "Verification OTP generated. Configure SMTP to send email.",
+      emailSent: emailResult.sent,
+      devOtp: emailResult.sent ? undefined : otp,
+    });
+  } catch (error) {
+    console.error(error.message);
+    return res.status(500).json({
+      message: "Unable to send verification OTP",
+    });
+  }
+};
+
+export const verifyEmailOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const providedOtp = String(otp || "").trim();
+
+    if (!providedOtp) {
+      return res.status(400).json({
+        message: "OTP is required",
+      });
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    if (user.emailVerified || user.provider === "google") {
+      return res.status(200).json({
+        message: "Email already verified",
+        emailVerified: true,
+      });
+    }
+
+    if (isOtpExpired(user.emailVerificationOtpExpiresAt)) {
+      return res.status(400).json({
+        message: "OTP has expired",
+      });
+    }
+
+    const isMatch = await verifyOtpHash(
+      providedOtp,
+      user.emailVerificationOtpHash,
+    );
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Invalid OTP",
+      });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationOtpHash = "";
+    user.emailVerificationOtpExpiresAt = null;
+    user.emailVerificationLastSentAt = null;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Email verified successfully",
+      emailVerified: true,
+    });
+  } catch (error) {
+    console.error(error.message);
+    return res.status(500).json({
+      message: "Unable to verify email",
+    });
+  }
 };

@@ -42,13 +42,21 @@ function Leaderboard() {
           </thead>
 
           <tbody>
-            {users.map((user, index) => (
-              <tr key={user._id}>
-                <td>{index + 1}</td>
-                <td>{user.username}</td>
-                <td>{user.solvedCount}</td>
+            {users.length > 0 ? (
+              users.map((user, index) => (
+                <tr key={user._id || index}>
+                  <td>{index + 1}</td>
+                  <td>{user.username}</td>
+                  <td>{user.solvedCount}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3" className="no-data">
+                  No Users Have Solved Any Problems Yet
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

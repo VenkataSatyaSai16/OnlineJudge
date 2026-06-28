@@ -1,4 +1,5 @@
 import Editor from "@monaco-editor/react";
+import useTheme from "../hooks/useTheme";
 
 const languageMap = {
   cpp: "cpp",
@@ -8,20 +9,39 @@ const languageMap = {
   javascript: "javascript",
 };
 
-function CodeEditor({ language, code, setData }) {
+function CodeEditor({ language, code, onCodeChange }) {
+  const { resolvedTheme } = useTheme();
+
+  const handleEditorWillMount = (monaco) => {
+    monaco.editor.defineTheme('oj-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#161b22',
+      },
+    });
+    monaco.editor.defineTheme('oj-light', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#161b22',
+      },
+    });
+  };
+
   return (
-    <div className="editor-card">
+    <div className="editor-card" style={{borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none"}}>
       <Editor
-        height="600px"
+        beforeMount={handleEditorWillMount}
+        height="100%"
         language={languageMap[language]}
         value={code}
-        theme="vs-dark"
-        onChange={(value) =>
-          setData((prev) => ({
-            ...prev,
-            code: value || "",
-          }))
-        }
+        theme={resolvedTheme === "dark" ? "oj-dark" : "oj-light"}
+        onChange={(value) => {
+          onCodeChange(value);
+        }}
       />
     </div>
   );

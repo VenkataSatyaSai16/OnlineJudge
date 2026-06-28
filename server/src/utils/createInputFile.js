@@ -6,20 +6,21 @@ const createInputFile = async (
     input = ""
 ) => {
 
-    const inputsDir = path.join(
+    const sandboxDir = path.join(
         process.cwd(),
-        "inputs"
+        "sandbox",
+        jobId
     );
 
-    if (!fs.existsSync(inputsDir)) {
-        fs.mkdirSync(inputsDir, {
+    if (!fs.existsSync(sandboxDir)) {
+        fs.mkdirSync(sandboxDir, {
             recursive: true
         });
     }
 
     const inputFilePath = path.join(
-        inputsDir,
-        `${jobId}.txt`
+        sandboxDir,
+        "input.txt"
     );
 
     fs.writeFileSync(

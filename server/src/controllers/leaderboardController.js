@@ -1,7 +1,11 @@
 import Submission from "../models/Submission.js";
+import { getCache, setCache } from "../services/cacheService.js";
 
 export const getLeaderboard = async (req, res) => {
   try {
+    const cached = await getCache("leaderboard:global");
+    if (cached) return res.status(200).json(cached);
+
     const leaderboard = await Submission.aggregate([
       {
         $match: {
@@ -56,6 +60,7 @@ export const getLeaderboard = async (req, res) => {
       },
     ]);
 
+    await setCache("leaderboard:global", leaderboard, 120);
     return res.status(200).json(leaderboard);
   } catch (error) {
     console.error(error);

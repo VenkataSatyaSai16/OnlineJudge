@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import SubmissionTable from "../components/SubmissionTable";
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -29,7 +30,20 @@ function ProfilePage() {
           <p>
             <strong>Email:</strong> {user.email}
           </p>
+          <p>
+            <strong>Verified:</strong> {user.emailVerified || user.provider === "google" ? "Yes" : "No"}
+          </p>
+          {user.provider !== "google" && !user.emailVerified && (
+            <Link className="btn-primary" to="/verify-email" style={{textDecoration: "none", textAlign: "center"}}>
+              Verify Email
+            </Link>
+          )}
         </div>
+
+      </div>
+
+      <div className="submissions">
+        <SubmissionTable></SubmissionTable>
       </div>
     </main>
   );

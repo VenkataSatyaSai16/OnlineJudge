@@ -16,6 +16,18 @@ export const checkUsername = (username) => {
     return api.get(`/auth/check-username/${username}`);
 }
 
+export const checkEmail = (email) => {
+    return api.get(`/auth/check-email/${email}`);
+}
+
 export const logoutUser = () =>{
     return api.post("/auth/logout");
+}
+
+export const sendVerificationOtp = () => {
+    return api.post("/auth/send-verification-otp");
+}
+
+export const verifyEmailOtp = (otp) => {
+    return api.post("/auth/verify-email-otp", { otp });
 }

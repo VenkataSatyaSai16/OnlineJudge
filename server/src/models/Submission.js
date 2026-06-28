@@ -18,7 +18,7 @@ const SubmissionSchema = new mongoose.Schema(
         type:String,
         required:[true,"Programming language is required"],
         enum:{
-            values:["cpp","python"],
+            values:["cpp","python","c","java","javascript"],
             message:"Language must be cpp or python"
         }
     },
@@ -34,7 +34,7 @@ const SubmissionSchema = new mongoose.Schema(
         enum:{
             values:[
                 "Accepted",
-                "Wrong Answer",
+                "Rejected",
                 "Runtime Error",
                 "Compilation Error",
                 "Time Limit Exceeded"
@@ -46,6 +46,27 @@ const SubmissionSchema = new mongoose.Schema(
     executionTime:{
         type:Number,
         default:0
+    },
+
+    memory:{
+        type:Number,
+        default:0
+    },
+
+    passedTestCases:{
+        type:Number,
+        default:0
+    },
+
+    totalTestCases:{
+        type:Number,
+        default:0
+    },
+
+    oaId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"MockOA",
+        default:null
     }
 },
 {

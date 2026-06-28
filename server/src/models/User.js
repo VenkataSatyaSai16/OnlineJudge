@@ -54,6 +54,53 @@ const UserSchema = new mongoose.Schema(
             message:"Role must be either user or admin"
         },
         default:"user"
+    },
+
+    emailVerified:{
+        type:Boolean,
+        default:false
+    },
+
+    emailVerificationOtpHash:{
+        type:String,
+        default:""
+    },
+
+    emailVerificationOtpExpiresAt:{
+        type:Date,
+        default:null
+    },
+
+    emailVerificationLastSentAt:{
+        type:Date,
+        default:null
+    },
+
+    aiUsage:{
+        monthKey:{
+            type:String,
+            default:""
+        },
+        studyPlanMonthlyCount:{
+            type:Number,
+            default:0
+        },
+        mockOaMonthlyCount:{
+            type:Number,
+            default:0
+        },
+        dayKey:{
+            type:String,
+            default:""
+        },
+        aiComplexityDailyCount:{
+            type:Number,
+            default:0
+        },
+        aiGenerateDailyCount:{
+            type:Number,
+            default:0
+        }
     }
 },
 {

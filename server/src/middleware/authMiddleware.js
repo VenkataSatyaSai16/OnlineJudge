@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -14,10 +15,19 @@ const authMiddleware = async (req, res, next) => {
     }
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const user = await User.findById(decoded.userId).select("role emailVerified provider");
+
+    if (!user) {
+      return res.status(401).json({
+        message: "User not found",
+      });
+    }
 
     req.user = {
       userId: decoded.userId,
-      role: decoded.role,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      provider: user.provider,
     };
 
     next();

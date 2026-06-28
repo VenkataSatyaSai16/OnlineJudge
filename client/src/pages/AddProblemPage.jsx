@@ -1,9 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useAuth from "../hooks/useAuth";
 import { addProblem } from "../api/problemApi";
+import { useNavigate } from "react-router-dom";
+import { FileCode2, ListPlus, Plus, Save, Trash2, Sparkles, BrainCircuit } from "lucide-react";
+import { analyzeProblemComplexity, generateProblemFromPrompt, getAiUsage } from "../api/aiApi";
+import AIAnalysisModal from "../components/AIAnalysisModal";
+import AIGenerateModal from "../components/AIGenerateModal";
+import AIGeneratePromptModal from "../components/AIGeneratePromptModal";
 
 function AddProblemPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [aiUsage, setAiUsage] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showGeneratePrompt, setShowGeneratePrompt] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [generatedProblem, setGeneratedProblem] = useState(null);
+  const [aiError, setAiError] = useState("");
+
+  useEffect(() => {
+    if (user && user.role === "admin") {
+      getAiUsage().then(res => setAiUsage(res.data.data)).catch(console.error);
+    }
+  }, [user]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -12,6 +33,8 @@ function AddProblemPage() {
     inputFormat: "",
     outputFormat: "",
     constraints: "",
+    timeLimit: "",
+    memoryLimit: "",
     tags: [],
     examples: [
       {
@@ -26,10 +49,6 @@ function AddProblemPage() {
       },
     ],
   });
-
-  if (!user || user.role !== "admin") {
-    return <h2>Access Denied</h2>;
-  }
 
   const handleChange = (e) => {
     setFormData({
@@ -106,21 +125,167 @@ function AddProblemPage() {
       testCases: updatedTestCases,
     });
   };
+  
   const addQuestion = async () => {
     try {
       const response = await addProblem(formData);
       alert(response.data.message);
+      navigate("/problems");
     } catch (error) {
       console.error(error);
     }
   };
+
+  const handleAnalyze = async () => {
+    if (!formData.title || !formData.description || !formData.constraints) {
+      alert("Validation Error: Title, Description, and Constraints are required.");
+      return;
+    }
+    if (!formData.examples || formData.examples.length === 0 || !formData.examples[0].input) {
+      alert("Validation Error: At least one example is required.");
+      return;
+    }
+    if (!formData.testCases || formData.testCases.length === 0 || !formData.testCases[0].input) {
+      alert("Validation Error: At least one test case is required.");
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      setAiError("");
+      const res = await analyzeProblemComplexity(formData);
+      setAnalysisResult(res.data.data);
+      
+      // Update usage locally
+      getAiUsage().then(r => setAiUsage(r.data.data)).catch(console.error);
+    } catch (err) {
+      alert(err.response?.data?.message || "AI Analysis failed");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleGenerateSubmit = async (promptData) => {
+    try {
+      setIsGenerating(true);
+      setAiError("");
+      const res = await generateProblemFromPrompt(promptData);
+      setGeneratedProblem(res.data.data);
+      setShowGeneratePrompt(false);
+      
+      getAiUsage().then(r => setAiUsage(r.data.data)).catch(console.error);
+    } catch (err) {
+      alert(err.response?.data?.message || "AI Generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const applyAnalysis = (analysis) => {
+    setFormData({
+      ...formData,
+      difficulty: analysis.difficulty,
+      tags: analysis.topics,
+      timeLimit: analysis.recommendedTimeLimit,
+      memoryLimit: analysis.recommendedMemoryLimit,
+    });
+    setAnalysisResult(null);
+  };
+
+  const applyGenerated = (problem) => {
+    setFormData({
+      ...formData,
+      title: problem.title || "",
+      description: problem.description || "",
+      difficulty: problem.difficulty || "",
+      inputFormat: problem.inputFormat || "",
+      outputFormat: problem.outputFormat || "",
+      constraints: problem.constraints || "",
+      timeLimit: problem.recommendedTimeLimit || "",
+      memoryLimit: problem.recommendedMemoryLimit || "",
+      tags: problem.topics || [],
+      examples: problem.examples && problem.examples.length > 0 ? problem.examples : formData.examples,
+      testCases: problem.testCases && problem.testCases.length > 0 ? problem.testCases : formData.testCases,
+    });
+    setGeneratedProblem(null);
+  };
+
+  if (!user || user.role !== "admin") {
+    return (
+      <main className="page-container">
+        <div className="state-box state-error">Access denied. Admin privileges are required.</div>
+      </main>
+    );
+  }
+
   return (
     <div className="add-problem-container">
+      {showGeneratePrompt && (
+        <AIGeneratePromptModal 
+          onClose={() => setShowGeneratePrompt(false)} 
+          onGenerate={handleGenerateSubmit} 
+          isGenerating={isGenerating} 
+        />
+      )}
+      
+      {analysisResult && (
+        <AIAnalysisModal 
+          analysis={analysisResult} 
+          onClose={() => setAnalysisResult(null)} 
+          onApply={applyAnalysis} 
+        />
+      )}
+
+      {generatedProblem && (
+        <AIGenerateModal 
+          problem={generatedProblem} 
+          onClose={() => setGeneratedProblem(null)} 
+          onApply={applyGenerated} 
+        />
+      )}
+
       <div className="form-header">
-        <h1>Add Problem</h1>
-        <button className="submit-btn" onClick={addQuestion}>
-          Add Problem
-        </button>
+        <div>
+          <p className="page-kicker">Admin</p>
+          <h1>Add Problem</h1>
+          <p className="page-subtitle">Create a public problem for the main problemset.</p>
+        </div>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+            <button 
+              className="btn btn-outline icon-link" 
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || isGenerating}
+            >
+              <BrainCircuit size={16} /> {isAnalyzing ? "Analyzing..." : "Analyze with AI"}
+            </button>
+            {aiUsage && (
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                Complexity: {aiUsage.aiComplexity.limit - aiUsage.aiComplexity.used} / {aiUsage.aiComplexity.limit} Today
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+            <button 
+              className="btn btn-outline icon-link" 
+              onClick={() => setShowGeneratePrompt(true)}
+              disabled={isAnalyzing || isGenerating}
+            >
+              <Sparkles size={16} /> Generate with AI
+            </button>
+            {aiUsage && (
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                Generate: {aiUsage.aiGenerate.limit - aiUsage.aiGenerate.used} / {aiUsage.aiGenerate.limit} Today
+              </span>
+            )}
+          </div>
+
+          <button className="submit-btn icon-link" onClick={addQuestion} disabled={isAnalyzing || isGenerating}>
+            <Save size={16} /> Save Problem
+          </button>
+        </div>
       </div>
 
       <div className="problem-form-grid">
@@ -128,71 +293,121 @@ function AddProblemPage() {
           {/* Basic Details */}
 
           <div className="form-card">
-            <h2>Basic Details</h2>
+            <h2><FileCode2 size={18} /> Basic Details</h2>
 
-            <input
-              type="text"
-              name="title"
-              placeholder="Problem Title"
-              value={formData.title}
-              onChange={handleChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Problem Title</label>
+              <input
+                type="text"
+                name="title"
+                placeholder="Problem Title"
+                value={formData.title}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              />
+            </div>
 
-            <textarea
-              rows="10"
-              name="description"
-              placeholder="Problem Description"
-              value={formData.description}
-              onChange={handleChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Problem Description</label>
+              <textarea
+                rows="10"
+                name="description"
+                placeholder="Problem Description"
+                value={formData.description}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              />
+            </div>
 
-            <select
-              name="difficulty"
-              value={formData.difficulty}
-              onChange={handleChange}
-            >
-              <option value="">Select Difficulty</option>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Difficulty</label>
+              <select
+                name="difficulty"
+                value={formData.difficulty}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              >
+                <option value="">Select Difficulty</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
 
-              <option value="Easy">Easy</option>
-
-              <option value="Medium">Medium</option>
-
-              <option value="Hard">Hard</option>
-            </select>
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>Time Limit (ms)</label>
+                <input
+                  type="number"
+                  name="timeLimit"
+                  placeholder="e.g. 2000"
+                  value={formData.timeLimit}
+                  onChange={handleChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>Memory Limit (MB)</label>
+                <input
+                  type="number"
+                  name="memoryLimit"
+                  placeholder="e.g. 256"
+                  value={formData.memoryLimit}
+                  onChange={handleChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="form-card">
-            <h2>Formats</h2>
+            <h2><ListPlus size={18} /> Formats</h2>
 
-            <textarea
-              rows="4"
-              name="inputFormat"
-              placeholder="Input Format"
-              value={formData.inputFormat}
-              onChange={handleChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Input Format</label>
+              <textarea
+                rows="4"
+                name="inputFormat"
+                placeholder="Input Format"
+                value={formData.inputFormat}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              />
+            </div>
 
-            <textarea
-              rows="4"
-              name="outputFormat"
-              placeholder="Output Format"
-              value={formData.outputFormat}
-              onChange={handleChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Output Format</label>
+              <textarea
+                rows="4"
+                name="outputFormat"
+                placeholder="Output Format"
+                value={formData.outputFormat}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              />
+            </div>
 
-            <textarea
-              rows="4"
-              name="constraints"
-              placeholder="Constraints"
-              value={formData.constraints}
-              onChange={handleChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Constraints</label>
+              <textarea
+                rows="4"
+                name="constraints"
+                placeholder="Constraints"
+                value={formData.constraints}
+                onChange={handleChange}
+                style={{ width: "100%" }}
+              />
+            </div>
 
-            <input
-              type="text"
-              placeholder="Tags (comma separated)"
-              onChange={handleTagsChange}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", display: "block", fontWeight: 500 }}>Tags</label>
+              <input
+                type="text"
+                placeholder="Tags (comma separated)"
+                onChange={handleTagsChange}
+                style={{ width: "100%" }}
+              />
+            </div>
           </div>
         </div>
 
@@ -203,8 +418,8 @@ function AddProblemPage() {
             <div className="section-header">
               <h2>Examples</h2>
 
-              <button className="add-btn" onClick={addExample}>
-                + Add Example
+              <button className="add-btn icon-link" onClick={addExample}>
+                <Plus size={15} /> Add Example
               </button>
             </div>
 
@@ -234,7 +449,7 @@ function AddProblemPage() {
                   className="delete-btn"
                   onClick={() => removeExample(index)}
                 >
-                  Remove
+                  <Trash2 size={14} /> Remove
                 </button>
               </div>
             ))}
@@ -246,8 +461,8 @@ function AddProblemPage() {
             <div className="section-header">
               <h2>Test Cases</h2>
 
-              <button className="add-btn" onClick={addTestCase}>
-                + Add Test Case
+              <button className="add-btn icon-link" onClick={addTestCase}>
+                <Plus size={15} /> Add Test Case
               </button>
             </div>
 
@@ -277,7 +492,7 @@ function AddProblemPage() {
                   className="delete-btn"
                   onClick={() => removeTestCase(index)}
                 >
-                  Remove
+                  <Trash2 size={14} /> Remove
                 </button>
               </div>
             ))}
