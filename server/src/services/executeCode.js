@@ -6,39 +6,44 @@ import path from "path";
 const execPromise = promisify(exec);
 
 const executeCode = async (language, filePath, inputFilePath, jobId, timeLimit = 3000) => {
-  let command;
-  let executablePath = null;
-
   const sandboxDir = path.join(process.cwd(), "sandbox", jobId);
+
+  let compileCommand = null;
+  let executeCommand = null;
+  let executablePath = null;
+  
+  // For Windows, append .exe if needed (though g++ does it automatically, we need to check for it)
+  const isWindows = process.platform === "win32";
 
   switch (language) {
     case "cpp":
       executablePath = path.join(sandboxDir, "Main");
-
-      command = `g++ "${filePath}" -o "${executablePath}" && "${executablePath}" < "${inputFilePath}"`;
-
+      if (isWindows) executablePath += ".exe";
+      compileCommand = `g++ "${filePath}" -o "${executablePath}"`;
+      executeCommand = `"${executablePath}" < "${inputFilePath}"`;
       break;
 
     case "c":
       executablePath = path.join(sandboxDir, "Main");
-
-      command = `gcc "${filePath}" -o "${executablePath}" && "${executablePath}" < "${inputFilePath}"`;
-
+      if (isWindows) executablePath += ".exe";
+      compileCommand = `gcc "${filePath}" -o "${executablePath}"`;
+      executeCommand = `"${executablePath}" < "${inputFilePath}"`;
       break;
 
     case "python":
-      command = `python3 "${filePath}" < "${inputFilePath}"`;
-
+      executeCommand = `python3 "${filePath}" < "${inputFilePath}"`;
+      // Fallback for Windows
+      if (isWindows) executeCommand = `python "${filePath}" < "${inputFilePath}"`;
       break;
 
     case "javascript":
-      command = `node "${filePath}" < "${inputFilePath}"`;
-
+      executeCommand = `node "${filePath}" < "${inputFilePath}"`;
       break;
 
     case "java":
-      command = `javac "${filePath}" && java -cp "${sandboxDir}" ${jobId} < "${inputFilePath}"`;
-
+      compileCommand = `javac "${filePath}"`;
+      executeCommand = `java -cp "${sandboxDir}" ${jobId} < "${inputFilePath}"`;
+      executablePath = path.join(sandboxDir, `${jobId}.class`);
       break;
 
     default:
@@ -46,7 +51,33 @@ const executeCode = async (language, filePath, inputFilePath, jobId, timeLimit =
   }
 
   try {
-    const { stdout } = await execPromise(command, {
+    // 1. Compile step (if needed)
+    if (compileCommand) {
+      const shouldCompile = !executablePath || !fs.existsSync(executablePath);
+      if (shouldCompile) {
+        try {
+          await execPromise(compileCommand, { timeout: 10000, cwd: sandboxDir });
+        } catch (compileError) {
+          return {
+            verdict: "Compilation Error",
+            output: null,
+          };
+        }
+      }
+    }
+
+    // 2. Verify executable/compiled file exists
+    if (executablePath) {
+      if (!fs.existsSync(executablePath)) {
+        return {
+          verdict: "Compilation Error",
+          output: null,
+        };
+      }
+    }
+
+    // 3. Execution step
+    const { stdout } = await execPromise(executeCommand, {
       timeout: timeLimit,
       cwd: sandboxDir,
     });
@@ -63,27 +94,10 @@ const executeCode = async (language, filePath, inputFilePath, jobId, timeLimit =
       };
     }
 
-    const errorText = error.stderr || error.message;
-
-    if (errorText.includes("error:")) {
-      return {
-        verdict: "Compilation Error",
-        output: null,
-      };
-    }
-
     return {
       verdict: "Runtime Error",
       output: null,
     };
-  } finally {
-    try {
-      if (sandboxDir && fs.existsSync(sandboxDir)) {
-        fs.rmSync(sandboxDir, { recursive: true, force: true });
-      }
-    } catch (error) {
-      console.error("Cleanup Error:", error.message);
-    }
   }
 };
 

@@ -5,8 +5,12 @@ import Problem from "../models/Problem.js";
 import Submission from "../models/Submission.js";
 import MockOA from "../models/MockOA.js";
 import MockOASubmission from "../models/MockOASubmission.js";
+import fs from "fs";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 export const runCode = async (req, res) => {
+  let jobId = uuidv4();
   try {
     let { language, code, input = "", problemId } = req.body;
 
@@ -24,7 +28,9 @@ export const runCode = async (req, res) => {
       });
     }
 
-    const { jobId, filePath } = await createCodeFile(language, code);
+    const fileCreationResult = await createCodeFile(language, code, jobId);
+    jobId = fileCreationResult.jobId;
+    const filePath = fileCreationResult.filePath;
 
     if (language === "java") {
       code = code.replace(/public\s+class\s+\w+/, `public class ${jobId}`);
@@ -39,10 +45,31 @@ export const runCode = async (req, res) => {
     return res.status(500).json({
       message: error.message,
     });
+  } finally {
+    if (jobId) {
+      const sandboxDir = path.join(process.cwd(), "sandbox", jobId);
+      let retries = 5;
+      while (retries > 0) {
+        try {
+          if (fs.existsSync(sandboxDir)) {
+            fs.rmSync(sandboxDir, { recursive: true, force: true });
+          }
+          break;
+        } catch (err) {
+          retries--;
+          if (retries === 0) {
+            console.error("Cleanup Error after retries:", err.message);
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+      }
+    }
   }
 };
 
 export const submitCode = async (req, res) => {
+  let jobId = uuidv4();
   try { 
     let { problemId, language, code, oaId } = req.body;
     const problem = await Problem.findById(problemId);
@@ -92,10 +119,16 @@ export const submitCode = async (req, res) => {
     let passedTestCases = 0;
     const totalTestCases = problem.testCases.length;
 
-    for (let i = 0; i < problem.testCases.length; i++) {
-    const testCase = problem.testCases[i];
+    const fileCreationResult = await createCodeFile(language, code, jobId);
+    jobId = fileCreationResult.jobId;
+    const filePath = fileCreationResult.filePath;
 
-      const { jobId, filePath } = await createCodeFile(language, code);
+    if (language === "java") {
+      code = code.replace(/public\s+class\s+\w+/, `public class ${jobId}`);
+    }
+
+    for (let i = 0; i < problem.testCases.length; i++) {
+      const testCase = problem.testCases[i];
 
       const inputFilePath = await createInputFile(jobId, testCase.input);
       const timeLimit = problem.timeLimit || 3000;
@@ -111,7 +144,6 @@ export const submitCode = async (req, res) => {
         break;
       }
 
-      
       if (output.output.trim() !== testCase.output.trim()) {
         verdict = "Rejected";
         break;
@@ -200,5 +232,25 @@ export const submitCode = async (req, res) => {
     return res.status(500).json({
       message: "Submission Failed",
     });
+  } finally {
+    if (jobId) {
+      const sandboxDir = path.join(process.cwd(), "sandbox", jobId);
+      let retries = 5;
+      while (retries > 0) {
+        try {
+          if (fs.existsSync(sandboxDir)) {
+            fs.rmSync(sandboxDir, { recursive: true, force: true });
+          }
+          break;
+        } catch (err) {
+          retries--;
+          if (retries === 0) {
+            console.error("Cleanup Error after retries:", err.message);
+          } else {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+      }
+    }
   }
 };

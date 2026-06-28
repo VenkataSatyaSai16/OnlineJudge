@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-const createCodeFile = async (language, code) => {
+const createCodeFile = async (language, code, jobId) => {
   if (!code) {
     throw new Error("Code is required");
   }
@@ -21,15 +21,17 @@ const createCodeFile = async (language, code) => {
     throw new Error("Unsupported language");
   }
 
-  const uuid = uuidv4();
-
-  let jobId = uuid;
-  let fileName = `${uuid}.${extension}`;
+  // If jobId is not provided, generate one (for backwards compatibility if needed)
+  if (!jobId) {
+    jobId = uuidv4();
+  }
+  
+  let fileName = `${jobId}.${extension}`;
   let finalCode = code;
 
   if (language === "java") {
     // Java-safe class name
-    const javaClassName = `Main_${uuid.replace(/-/g, "_")}`;
+    const javaClassName = `Main_${jobId.replace(/-/g, "_")}`;
 
     finalCode = code.replace(
       /public\s+class\s+\w+/,
